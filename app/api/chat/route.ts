@@ -5,6 +5,7 @@ import {
   tool,
   createUIMessageStreamResponse,
   toUIMessageStream,
+  isStepCount,
 } from 'ai';
 import { createAmazonBedrock  } from "@ai-sdk/amazon-bedrock";
 import z from 'zod';
@@ -19,6 +20,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: bedrockMantle("qwen.qwen3-coder-next"),
     messages: await convertToModelMessages(messages),
+    stopWhen: isStepCount(5),
     tools: {
       weather: tool({
         description: "Get the weather in a location (fahrenheit)",
@@ -32,6 +34,20 @@ export async function POST(req: Request) {
             temperature
           };
         },
+      }),
+      convertFahrenheitToCelcius: tool({
+        description: "Convert a temperature in fahrenheit to celsius",
+        inputSchema: z.object({
+          temperature: z
+            .number()
+            .describe("The temperature in fahrenheit to convert"),
+        }),
+        execute: async({temperature}) => {
+          const celsius = Math.round((temperature - 32) * ( 5 / 9));
+          return {
+            celsius,
+          }
+        }
       })
     }
   });
